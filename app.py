@@ -30,6 +30,8 @@ st.markdown("---")
 
 # 資料庫檔案位置
 DB_PATH = "site_locations.csv"
+# 刪除密碼
+DELETE_PASSWORD = "27880751"
 
 # 讀取資料
 if os.path.exists(DB_PATH):    
@@ -59,10 +61,22 @@ for group_key in sorted(grouped.groups.keys()):
                 unsafe_allow_html=True
             )
         with col3:
-            if st.button("刪除", key=f"del_{row.name}"):
-                df = df.drop(row.name).reset_index(drop=True)
-                df.to_csv(DB_PATH, index=False)
-                st.experimental_rerun()
+            confirm_key = f"confirm_{row.name}"
+            pwd_key = f"pwd_{row.name}"
+            if st.session_state.get(confirm_key):
+                pwd = st.text_input("刪除密碼", type="password", key=pwd_key)
+                if st.button("確認刪除", key=f"confirm_del_{row.name}"):
+                    if pwd == DELETE_PASSWORD:
+                        df = df.drop(row.name).reset_index(drop=True)
+                        df.to_csv(DB_PATH, index=False)
+                        st.experimental_rerun()
+                    else:
+                        st.error("❌ 密碼錯誤，未進行刪除")
+                    st.session_state.pop(confirm_key)
+                    st.session_state.pop(pwd_key, None)
+            else:
+                if st.button("刪除", key=f"del_{row.name}"):
+                    st.session_state[confirm_key] = True
 
         # 🔹 加上淺灰色虛線分隔線
         st.markdown("<hr style='border-top: 1px dashed lightgray;'>", unsafe_allow_html=True)
