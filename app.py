@@ -25,7 +25,7 @@ st.markdown("---")
 
 # 建立 GSheets 連線並讀取資料 :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15}
 conn = st.connection("gsheets", type=GSheetsConnection)
-df = conn.read()  # 可補充參數：worksheet="Sheet1", usecols=[0,1,2,3,4], ttl="10m" :contentReference[oaicite:16]{index=16}
+df = conn.read()  # 可補充參數：worksheet="工作表1", usecols=[0,1,2,3,4], ttl="10m" :contentReference[oaicite:16]{index=16}
 
 # 顯示工地清單
 st.subheader("📋 工地清單")
