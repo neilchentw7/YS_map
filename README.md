@@ -6,6 +6,7 @@ This project provides a Streamlit application for managing construction site loc
 
 1. Create a Google Sheet and set its sharing permissions to **Anyone with the link can edit**.
 2. Store the sheet URL in `GSHEET_URL` or add it to `.streamlit/secrets.toml` under `public_gsheet_url`.
+   If no URL is provided the app falls back to a read-only sample sheet.
    You can use the example sheet below:
    ```
    https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0
@@ -30,3 +31,4 @@ public_gsheet_url = "https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuK
 ```
 
 The application will read this secret at runtime.
+When the sample sheet is used, write operations are disabled and you'll see a warning.
