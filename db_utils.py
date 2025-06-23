@@ -1,4 +1,6 @@
 import os
+import base64
+import json
 import pandas as pd
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -12,14 +14,32 @@ def _init_firestore():
     global _db
     if _db is not None:
         return _db
+    cred = None
     cred_path = os.environ.get('FIREBASE_CREDENTIALS')
-    if not cred_path:
+    cred_b64 = os.environ.get('FIREBASE_CREDENTIALS_B64')
+    if cred_path and os.path.exists(cred_path):
+        cred = credentials.Certificate(cred_path)
+    elif cred_b64:
+        data = base64.b64decode(cred_b64)
+        cred = credentials.Certificate(json.loads(data))
+    else:
+        # Attempt to load from Streamlit secrets
+        try:
+            import streamlit as st
+            if 'firebase_credentials_b64' in st.secrets:
+                data = base64.b64decode(st.secrets['firebase_credentials_b64'])
+                cred = credentials.Certificate(json.loads(data))
+            elif 'firebase_credentials' in st.secrets:
+                cred = credentials.Certificate(dict(st.secrets['firebase_credentials']))
+        except Exception:
+            pass
+    if not cred:
         raise RuntimeError(
-            'FIREBASE_CREDENTIALS environment variable is not set. '
-            'Set it to the service account JSON path.'
+            'Firebase credentials not configured. Set FIREBASE_CREDENTIALS or '
+            'FIREBASE_CREDENTIALS_B64, or configure firebase_credentials_b64 in '
+            'Streamlit secrets.'
         )
     if not firebase_admin._apps:
-        cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
     _db = firestore.client()
     return _db
