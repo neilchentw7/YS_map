@@ -24,12 +24,13 @@ st.markdown(
 st.markdown("---")
 
 # 建立 GSheets 連線並讀取資料 :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15}
+
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(
-    spreadsheet="https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0#gid=0",
-    worksheet="工作表1",         # ← 你的工作表名稱
-    usecols=[0, 1, 2, 3, 4],    # ← 如有需要，指定要讀哪些欄位
-    ttl="10m"                   # ← 可選：快取時間
+    spreadsheet="https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/export?format=csv&gid=0",
+    worksheet="工作表1",      # ← 你的工作表名称
+    usecols=[0, 1, 2, 3, 4], # ← 需要的栏位索引
+    ttl="10m"                # ← 可选：缓存 10 分钟
 )
 
 # 顯示工地清單
