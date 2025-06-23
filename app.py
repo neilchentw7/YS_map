@@ -2,7 +2,7 @@
 import streamlit as st
 import base64
 import pandas as pd
-import os
+import db_utils
 
 # 頁面設定
 st.set_page_config(page_title="禹盛-工地導航系統", layout="wide")
@@ -28,17 +28,14 @@ st.markdown(
 
 st.markdown("---")
 
-# 資料庫檔案位置
-DB_PATH = "site_locations.csv"
+# 先初始化資料庫
+db_utils.init_db()
+
 # 刪除密碼
 DELETE_PASSWORD = "27880751"
 
 # 讀取資料
-if os.path.exists(DB_PATH):    
-    df = pd.read_csv(DB_PATH, dtype={"聯絡電話": str})
-
-else:
-    df = pd.DataFrame(columns=["工地名稱", "地址", "GoogleMap網址", "工地主任", "聯絡電話"])
+df = db_utils.get_all_locations()
 
 # 📋 顯示工地資料（使用副本加上首字）
 st.subheader("📋 工地清單（依工地名稱首字分組）")
@@ -61,21 +58,20 @@ for group_key in sorted(grouped.groups.keys()):
                 unsafe_allow_html=True
             )
         with col3:
-            confirm_key = f"confirm_{row.name}"
-            pwd_key = f"pwd_{row.name}"
+            confirm_key = f"confirm_{row['id']}"
+            pwd_key = f"pwd_{row['id']}"
             if st.session_state.get(confirm_key):
                 pwd = st.text_input("刪除密碼", type="password", key=pwd_key)
-                if st.button("確認刪除", key=f"confirm_del_{row.name}"):
+                if st.button("確認刪除", key=f"confirm_del_{row['id']}"):
                     if pwd == DELETE_PASSWORD:
-                        df = df.drop(row.name).reset_index(drop=True)
-                        df.to_csv(DB_PATH, index=False)
+                        db_utils.delete_location(row['id'])
                         st.experimental_rerun()
                     else:
                         st.error("❌ 密碼錯誤，未進行刪除")
                     st.session_state.pop(confirm_key)
                     st.session_state.pop(pwd_key, None)
             else:
-                if st.button("刪除", key=f"del_{row.name}"):
+                if st.button("刪除", key=f"del_{row['id']}"):
                     st.session_state[confirm_key] = True
 
         # 🔹 加上淺灰色虛線分隔線
@@ -105,8 +101,7 @@ with st.expander("➕ 新增工地資料"):
         submit = st.form_submit_button("新增")
         if submit:
             if name and url:
-                df.loc[len(df)] = [name, address, url, supervisor, phone]
-                df.to_csv(DB_PATH, index=False)
+                db_utils.add_location(name, address, url, supervisor, phone)
                 st.success("✅ 已新增工地")
                 st.experimental_rerun()
             else:
