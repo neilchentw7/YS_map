@@ -3,6 +3,7 @@ import streamlit as st
 import base64
 import pandas as pd
 import db_utils
+import os
 
 # 頁面設定
 st.set_page_config(page_title="禹盛-工地導航系統", layout="wide")
@@ -31,8 +32,10 @@ st.markdown("---")
 # 先初始化資料庫
 db_utils.init_db()
 
-# 刪除密碼
-DELETE_PASSWORD = "27880751"
+# 刪除密碼從環境變數或 Streamlit secrets 讀取
+DELETE_PASSWORD = os.environ.get("DELETE_PASSWORD")
+if not DELETE_PASSWORD:
+    DELETE_PASSWORD = st.secrets.get("DELETE_PASSWORD", "")  # type: ignore
 
 # 讀取資料
 df = db_utils.get_all_locations()

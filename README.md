@@ -10,11 +10,13 @@ This project provides a Streamlit application for managing construction site loc
    ```
    https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0
    ```
-3. Install dependencies:
+3. Set the delete password using the `DELETE_PASSWORD` environment variable or
+   add it to `.streamlit/secrets.toml`.
+4. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-4. Run the Streamlit application:
+5. Run the Streamlit application:
    ```bash
    streamlit run app.py
    ```
@@ -27,6 +29,7 @@ On Streamlit Cloud, create `.streamlit/secrets.toml` with the following content 
 
 ```
 public_gsheet_url = "https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0"
+DELETE_PASSWORD = "your-password"
 ```
 
 The application will read this secret at runtime.
