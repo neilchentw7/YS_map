@@ -23,11 +23,10 @@ st.markdown(
 
 st.markdown("---")
 
-# 直接使用「發布到網路」後的 CSV 連結
+# 直接使用新的 Google Sheets 連結
 CSV_URL = (
-    "https://docs.google.com/spreadsheets/d/e/"
-    "2PACX-1vR0AmC5c3vXNRglsmynyaXb5T4_3Qwiw1L2sk6Gb8zawNUGECxJ3CZogH58Xl5bDMwpYHzW4_35T5Uk/"
-    "pub?gid=0&single=true&output=csv"
+    "https://docs.google.com/spreadsheets/d/"
+    "1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0#gid=0"
 )
 
 # 建立連線並讀取資料
