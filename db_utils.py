@@ -1,67 +1,78 @@
-import sqlite3
-import pandas as pd
 import os
+import pandas as pd
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-DB_PATH = 'site_locations.db'
 CSV_PATH = 'site_locations.csv'
+_collection = 'locations'
+_db = None
+
+
+def _init_firestore():
+    global _db
+    if _db is not None:
+        return _db
+    cred_path = os.environ.get('FIREBASE_CREDENTIALS')
+    if not cred_path:
+        raise RuntimeError(
+            'FIREBASE_CREDENTIALS environment variable is not set. '
+            'Set it to the service account JSON path.'
+        )
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+    _db = firestore.client()
+    return _db
+
 
 def init_db():
-    first_time = not os.path.exists(DB_PATH)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                address TEXT,
-                url TEXT NOT NULL,
-                supervisor TEXT,
-                phone TEXT
-        )"""
-    )
-    conn.commit()
-    if first_time and os.path.exists(CSV_PATH):
+    db = _init_firestore()
+    # populate from CSV if collection empty
+    docs = list(db.collection(_collection).limit(1).stream())
+    if not docs and os.path.exists(CSV_PATH):
         df = pd.read_csv(CSV_PATH, dtype={'聯絡電話': str})
         for _, row in df.iterrows():
-            cursor.execute(
-                'INSERT INTO locations (name, address, url, supervisor, phone) VALUES (?, ?, ?, ?, ?)',
-                (row['工地名稱'], row['地址'], row['GoogleMap網址'], row['工地主任'], row['聯絡電話'])
-            )
-        conn.commit()
-    conn.close()
+            db.collection(_collection).add({
+                'name': row['工地名稱'],
+                'address': row['地址'],
+                'url': row['GoogleMap網址'],
+                'supervisor': row['工地主任'],
+                'phone': row['聯絡電話'],
+            })
 
 
 def get_all_locations():
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query('SELECT * FROM locations', conn)
-    conn.close()
-    df.rename(
-        columns={
-            'name': '工地名稱',
-            'address': '地址',
-            'url': 'GoogleMap網址',
-            'supervisor': '工地主任',
-            'phone': '聯絡電話',
-        },
-        inplace=True,
-    )
+    db = _init_firestore()
+    docs = db.collection(_collection).stream()
+    rows = []
+    for doc in docs:
+        data = doc.to_dict()
+        data['id'] = doc.id
+        rows.append(data)
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return pd.DataFrame(columns=['id', '工地名稱', '地址', 'GoogleMap網址', '工地主任', '聯絡電話'])
+    df.rename(columns={
+        'name': '工地名稱',
+        'address': '地址',
+        'url': 'GoogleMap網址',
+        'supervisor': '工地主任',
+        'phone': '聯絡電話',
+    }, inplace=True)
     return df
 
 
 def add_location(name, address, url, supervisor, phone):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        'INSERT INTO locations (name, address, url, supervisor, phone) VALUES (?, ?, ?, ?, ?)',
-        (name, address, url, supervisor, phone)
-    )
-    conn.commit()
-    conn.close()
+    db = _init_firestore()
+    db.collection(_collection).add({
+        'name': name,
+        'address': address,
+        'url': url,
+        'supervisor': supervisor,
+        'phone': phone,
+    })
 
 
 def delete_location(row_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM locations WHERE id = ?', (row_id,))
-    conn.commit()
-    conn.close()
+    db = _init_firestore()
+    db.collection(_collection).document(row_id).delete()
