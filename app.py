@@ -23,19 +23,19 @@ st.markdown(
 
 st.markdown("---")
 
-# 直接使用新的 Google Sheets 連結 (以 CSV 形式讀取第一個工作表)
-CSV_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE"
-    "/export?format=csv&gid=0"
-)
 
-# 建立連線並讀取資料
+# 1) 把 edit#gid=0 換成 export?format=csv
+CSV_URL = "https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0#gid=0"
+
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(
-    spreadsheet=CSV_URL,
-    ttl="10m"
+    spreadsheet=CSV_URL,   # 直丟 URL -> 公開模式
+    ttl="10m",             # 快取 10 分鐘
+    header=0,              # 第 1 列當欄名
+    on_bad_lines="skip"    # 若有壞行就跳過
 )
+st.dataframe(df)
+
 
 # 顯示工地清單
 st.subheader("📋 工地清單")
