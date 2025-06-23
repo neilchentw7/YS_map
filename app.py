@@ -25,7 +25,12 @@ st.markdown("---")
 
 # 建立 GSheets 連線並讀取資料 :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15}
 conn = st.connection("gsheets", type=GSheetsConnection)
-df = conn.read()  # 可補充參數：worksheet="工作表1", usecols=[0,1,2,3,4], ttl="10m" :contentReference[oaicite:16]{index=16}
+df = conn.read(
+    spreadsheet="https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0#gid=0",
+    worksheet="工作表1",         # ← 你的工作表名稱
+    usecols=[0, 1, 2, 3, 4],    # ← 如有需要，指定要讀哪些欄位
+    ttl="10m"                   # ← 可選：快取時間
+)
 
 # 顯示工地清單
 st.subheader("📋 工地清單")
