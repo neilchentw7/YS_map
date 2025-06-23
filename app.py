@@ -1,6 +1,6 @@
 import streamlit as st
 import base64
-from streamlit_gsheets import GSheetsConnection  # 新增
+from streamlit_gsheets import GSheetsConnection
 
 # 頁面設定
 st.set_page_config(page_title="禹盛-工地導航系統", layout="wide")
@@ -23,19 +23,19 @@ st.markdown(
 
 st.markdown("---")
 
-# 建立 GSheets 連線並讀取資料 :contentReference[oaicite:14]{index=14} :contentReference[oaicite:15]{index=15}
-
-
-SHEET_ID = "1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE"
-conn = st.connection("gsheets", type=GSheetsConnection)
-df = conn.read(
-    spreadsheet=SHEET_ID,
-    worksheet=0,   # ← 第 1 张工作表的索引 (GID 通常也是 0)
-    ttl="10m"
+# 直接使用「發布到網路」後的 CSV 連結
+CSV_URL = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vR0AmC5c3vXNRglsmynyaXb5T4_3Qwiw1L2sk6Gb8zawNUGECxJ3CZogH58Xl5bDMwpYHzW4_35T5Uk/"
+    "pub?gid=0&single=true&output=csv"
 )
 
-
-
+# 建立連線並讀取資料
+conn = st.connection("gsheets", type=GSheetsConnection)
+df = conn.read(
+    spreadsheet=CSV_URL,
+    ttl="10m"
+)
 
 # 顯示工地清單
 st.subheader("📋 工地清單")
