@@ -1,5 +1,0 @@
-__pycache__/
-*.pyc
-serviceAccountKey.json
-site_locations.db
-.env
