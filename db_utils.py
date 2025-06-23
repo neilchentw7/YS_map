@@ -1,67 +1,72 @@
-import sqlite3
-import pandas as pd
 import os
+import pandas as pd
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-DB_PATH = 'site_locations.db'
 CSV_PATH = 'site_locations.csv'
+COLLECTION_NAME = 'locations'
+
+# Initialize Firebase app using a service account key.
+# The path can be provided via the FIREBASE_CREDENTIALS environment variable
+# or defaults to 'firebase_credentials.json'.
+cred_path = os.environ.get('FIREBASE_CREDENTIALS', 'firebase_credentials.json')
+if not firebase_admin._apps:
+    if os.path.exists(cred_path):
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+    else:
+        raise FileNotFoundError(
+            f"Firebase credential file not found: {cred_path}. "
+            "Set FIREBASE_CREDENTIALS environment variable to the correct path."
+        )
+
+db = firestore.client()
 
 def init_db():
-    first_time = not os.path.exists(DB_PATH)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS locations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                address TEXT,
-                url TEXT NOT NULL,
-                supervisor TEXT,
-                phone TEXT
-        )"""
-    )
-    conn.commit()
-    if first_time and os.path.exists(CSV_PATH):
+    """Populate Firestore with initial data from CSV if empty."""
+    docs = list(db.collection(COLLECTION_NAME).limit(1).stream())
+    if not docs and os.path.exists(CSV_PATH):
         df = pd.read_csv(CSV_PATH, dtype={'聯絡電話': str})
         for _, row in df.iterrows():
-            cursor.execute(
-                'INSERT INTO locations (name, address, url, supervisor, phone) VALUES (?, ?, ?, ?, ?)',
-                (row['工地名稱'], row['地址'], row['GoogleMap網址'], row['工地主任'], row['聯絡電話'])
-            )
-        conn.commit()
-    conn.close()
-
+            db.collection(COLLECTION_NAME).add({
+                'name': row['工地名稱'],
+                'address': row['地址'],
+                'url': row['GoogleMap網址'],
+                'supervisor': row['工地主任'],
+                'phone': row['聯絡電話'],
+            })
 
 def get_all_locations():
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query('SELECT * FROM locations', conn)
-    conn.close()
-    df.rename(
-        columns={
-            'name': '工地名稱',
-            'address': '地址',
-            'url': 'GoogleMap網址',
-            'supervisor': '工地主任',
-            'phone': '聯絡電話',
-        },
-        inplace=True,
-    )
+    """Return all locations as a DataFrame."""
+    docs = db.collection(COLLECTION_NAME).stream()
+    records = []
+    for doc in docs:
+        data = doc.to_dict()
+        data['id'] = doc.id
+        records.append(data)
+    df = pd.DataFrame(records)
+    if df.empty:
+        df = pd.DataFrame(columns=['id', 'name', 'address', 'url', 'supervisor', 'phone'])
+    df.rename(columns={
+        'name': '工地名稱',
+        'address': '地址',
+        'url': 'GoogleMap網址',
+        'supervisor': '工地主任',
+        'phone': '聯絡電話',
+    }, inplace=True)
     return df
 
-
 def add_location(name, address, url, supervisor, phone):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(
-        'INSERT INTO locations (name, address, url, supervisor, phone) VALUES (?, ?, ?, ?, ?)',
-        (name, address, url, supervisor, phone)
-    )
-    conn.commit()
-    conn.close()
+    """Add a new location to Firestore."""
+    db.collection(COLLECTION_NAME).add({
+        'name': name,
+        'address': address,
+        'url': url,
+        'supervisor': supervisor,
+        'phone': phone,
+    })
 
+def delete_location(doc_id):
+    """Delete a location from Firestore by document id."""
+    db.collection(COLLECTION_NAME).document(doc_id).delete()
 
-def delete_location(row_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM locations WHERE id = ?', (row_id,))
-    conn.commit()
-    conn.close()
