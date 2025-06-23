@@ -1,4 +1,3 @@
-
 import streamlit as st
 import base64
 import pandas as pd
@@ -7,11 +6,13 @@ import db_utils
 # 頁面設定
 st.set_page_config(page_title="禹盛-工地導航系統", layout="wide")
 
+
 # 將 logo.png 轉成 base64 編碼，以內嵌方式顯示
 def image_to_base64(path):
     with open(path, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
     return encoded
+
 
 img_base64 = image_to_base64("logo.png")
 
@@ -23,7 +24,7 @@ st.markdown(
         <h2 style='margin: 0;'>禹盛工地導航系統</h2>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 st.markdown("---")
@@ -41,8 +42,8 @@ df = db_utils.get_all_locations()
 st.subheader("📋 工地清單（依工地名稱首字分組）")
 
 df_display = df.copy()
-df_display['首字'] = df_display['工地名稱'].str[0]
-grouped = df_display.groupby('首字')
+df_display["首字"] = df_display["工地名稱"].str[0]
+grouped = df_display.groupby("首字")
 
 for group_key in sorted(grouped.groups.keys()):
     group = grouped.get_group(group_key)
@@ -55,7 +56,7 @@ for group_key in sorted(grouped.groups.keys()):
                 f"{row['地址']}<br>"
                 f"👷 主任：{row['工地主任']}<br>"
                 f"📞 電話：{row['聯絡電話']}",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
         with col3:
             confirm_key = f"confirm_{row['id']}"
@@ -64,7 +65,7 @@ for group_key in sorted(grouped.groups.keys()):
                 pwd = st.text_input("刪除密碼", type="password", key=pwd_key)
                 if st.button("確認刪除", key=f"confirm_del_{row['id']}"):
                     if pwd == DELETE_PASSWORD:
-                        db_utils.delete_location(row['id'])
+                        db_utils.delete_location(row["id"])
                         st.experimental_rerun()
                     else:
                         st.error("❌ 密碼錯誤，未進行刪除")
@@ -75,7 +76,9 @@ for group_key in sorted(grouped.groups.keys()):
                     st.session_state[confirm_key] = True
 
         # 🔹 加上淺灰色虛線分隔線
-        st.markdown("<hr style='border-top: 1px dashed lightgray;'>", unsafe_allow_html=True)
+        st.markdown(
+            "<hr style='border-top: 1px dashed lightgray;'>", unsafe_allow_html=True
+        )
 
 # 🔍 搜尋工地
 st.subheader("🔍 查詢工地")
@@ -87,7 +90,7 @@ if search:
         st.markdown(
             f"**{row['工地名稱']}** | {row['地址']} | 👷 {row['工地主任']} | 📞 {row['聯絡電話']} | "
             f"[導航]({row['GoogleMap網址']})",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
 # ➕ 新增工地
