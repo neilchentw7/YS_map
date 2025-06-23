@@ -30,9 +30,10 @@ SHEET_ID = "1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE"
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(
     spreadsheet=SHEET_ID,
-    worksheet="工作表1",
-    ttl="10m",
+    worksheet=0,   # ← 用第 1 張表的 GID（通常第一張表是 0）
+    ttl="10m"
 )
+
 
 
 # 顯示工地清單
