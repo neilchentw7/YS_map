@@ -1,78 +1,79 @@
 import os
+import json
 import pandas as pd
-import streamlit as st
-from streamlit_gsheets import GSheetsConnection
+import gspread
+from google.oauth2.service_account import Credentials
 
 CSV_PATH = 'site_locations.csv'
 _SHEET_NAME = 'locations'
-# Default sheet URL for convenience when no environment variable or secret is provided
-DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VV2AXV7-ZudWApvRiuKW8gcehXOM1CaPXGyHyFvDPQE/edit?gid=0"
-_conn = None
-_sheet_url = None
+_sheet = None
 
 
-def _init_connection():
-    """Initialize the Google Sheets connection."""
-    global _conn, _sheet_url
-    if _conn is not None:
-        return _conn
+def _init_sheet():
+    """Initialize and cache the Google Sheet instance."""
+    global _sheet
+    if _sheet is not None:
+        return _sheet
 
-    _sheet_url = os.environ.get('GSHEET_URL')
-    if not _sheet_url:
-        _sheet_url = st.secrets.get('public_gsheet_url', None)  # type: ignore
+    creds_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
 
-    # Fall back to the default sample sheet
-    if not _sheet_url:
-        _sheet_url = DEFAULT_SHEET_URL
+    if not creds_json or not spreadsheet_id:
+        try:
+            import streamlit as st
+            creds_json = creds_json or st.secrets.get('gcp_service_account')  # type: ignore
+            spreadsheet_id = spreadsheet_id or st.secrets.get('spreadsheet_id')  # type: ignore
+        except Exception:
+            pass
 
-    if not _sheet_url:
+    if not creds_json or not spreadsheet_id:
         raise RuntimeError(
-            'Google Sheet URL not configured. Set GSHEET_URL environment variable '
-            'or public_gsheet_url in Streamlit secrets.'
+            'Google Sheets credentials not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON '
+            'and SPREADSHEET_ID or configure them in Streamlit secrets.'
         )
 
-    _conn = st.experimental_connection('gsheets', type=GSheetsConnection)
-    return _conn
+    creds_info = json.loads(creds_json)
+    creds = Credentials.from_service_account_info(
+        creds_info,
+        scopes=['https://www.googleapis.com/auth/spreadsheets'],
+    )
+    client = gspread.authorize(creds)
+    spreadsheet = client.open_by_key(spreadsheet_id)
+    try:
+        _sheet = spreadsheet.worksheet(_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        _sheet = spreadsheet.sheet1
+        _sheet.update_title(_SHEET_NAME)
+    return _sheet
 
 
 
 
 def init_db():
     """Populate the sheet with initial data if it's empty."""
-    conn = _init_connection()
-    df = conn.read(spreadsheet=_sheet_url, worksheet=_SHEET_NAME, ttl=0)
-    if df.empty and os.path.exists(CSV_PATH):
+    sheet = _init_sheet()
+    if len(sheet.get_all_values()) == 0 and os.path.exists(CSV_PATH):
         df = pd.read_csv(CSV_PATH, dtype={'聯絡電話': str})
-        conn.update(worksheet=_SHEET_NAME, data=df)
+        rows = [df.columns.tolist()] + df.values.tolist()
+        sheet.append_rows(rows)
 
 
 def get_all_locations():
-    conn = _init_connection()
-    df = conn.read(spreadsheet=_sheet_url, worksheet=_SHEET_NAME, ttl=0)
-    if df.empty:
-        df = pd.DataFrame(columns=['工地名稱', '地址', 'GoogleMap網址', '工地主任', '聯絡電話'])
-    df.insert(0, 'id', range(2, len(df) + 2))
+    sheet = _init_sheet()
+    rows = sheet.get_all_values()
+    if not rows:
+        return pd.DataFrame(columns=['id', '工地名稱', '地址', 'GoogleMap網址', '工地主任', '聯絡電話'])
+    header, *data = rows
+    df = pd.DataFrame(data, columns=header)
+    df.insert(0, 'id', range(2, len(data) + 2))
     return df
 
 
 def add_location(name, address, url, supervisor, phone):
-    conn = _init_connection()
-    df = conn.read(spreadsheet=_sheet_url, worksheet=_SHEET_NAME, ttl=0)
-    new_row = {
-        '工地名稱': name,
-        '地址': address,
-        'GoogleMap網址': url,
-        '工地主任': supervisor,
-        '聯絡電話': phone,
-    }
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    conn.update(worksheet=_SHEET_NAME, data=df)
+    sheet = _init_sheet()
+    sheet.append_row([name, address, url, supervisor, phone])
 
 
 def delete_location(row_id):
-    conn = _init_connection()
-    df = conn.read(spreadsheet=_sheet_url, worksheet=_SHEET_NAME, ttl=0)
-    idx = int(row_id) - 2
-    if 0 <= idx < len(df):
-        df = df.drop(df.index[idx]).reset_index(drop=True)
-        conn.update(worksheet=_SHEET_NAME, data=df)
+    sheet = _init_sheet()
+    sheet.delete_rows(int(row_id))
